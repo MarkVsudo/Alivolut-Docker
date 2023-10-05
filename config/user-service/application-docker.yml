@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    username: user_service_user
+    password: user_service
+    url: jdbc:postgresql://alivolut_postgresql:5432/user_service
+  liquibase:
+    default-schema: user_service
+auth:
+  token:
+    jwkSetUrl: http://keycloak:8080/realms/master/protocol/openid-connect/certs

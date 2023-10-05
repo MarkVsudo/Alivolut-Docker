@@ -1,0 +1,109 @@
+---
+version: "3.9"
+services:
+  alivolut_postgresql:
+    container_name: "alivolut_postgresql"
+    build:
+      context: "./"
+      dockerfile: "docker_postgresql.dockerfile"
+    environment:
+      - "POSTGRESQL_USERNAME=postgres"
+      - "POSTGRESQL_PASSWORD=postgres"
+    volumes:
+      - "./data/postgresql:/bitnami/postgresql"
+    ports:
+      - "5432:5432"
+    networks:
+      - "local"
+    healthcheck:
+      test: ["CMD-SHELL", "export PGPASSWORD=postgres && pg_isready -U postgres -d postgres"]
+      start_period: 30s
+      interval: 30s
+      timeout: 30s
+      retries: 10
+
+  alivolut_keycloak:
+    container_name: "alivolut_keycloak"
+    image: "docker.io/bitnami/keycloak:21"
+    environment:
+      - "KEYCLOAK_DATABASE_HOST=alivolut_postgresql"
+      - "KEYCLOAK_DATABASE_USER=keycloak_user"
+      - "KEYCLOAK_DATABASE_PASSWORD=keycloak"
+      - "KEYCLOAK_DATABASE_NAME=postgres"
+      - "KEYCLOAK_DATABASE_SCHEMA=keycloak"
+    depends_on:
+      alivolut_postgresql:
+        condition: service_healthy
+    ports:
+      - "8585:8080"
+    networks:
+      - "local"
+
+  alivoulut_user-service:
+    container_name: alivoulut_user-service
+    build:
+      context: "./"
+      dockerfile: "docker_user-service.dockerfile"
+    ports:
+      - "8081:8080"
+    environment:
+      - "SPRING_PROFILES_ACTIVE=docker"
+    depends_on:
+      - alivolut_postgresql
+      - alivolut_keycloak
+    networks:
+      - "local"
+
+  alivoulut_transactions-service:
+    container_name: alivoulut_transactions-service
+    build:
+      context: "./"
+      dockerfile: "docker_transactions-service.dockerfile"
+    ports:
+      - "8082:8080"
+    environment:
+      - "SPRING_PROFILES_ACTIVE=docker"
+    depends_on:
+      - alivolut_postgresql
+      - alivolut_keycloak
+    networks:
+      - "local"
+
+  alivolut_platform-ui:
+    container_name: "alivolut_platform-ui"
+    build:
+      context: "./"
+      dockerfile: "docker_platfrom-ui.dockerfile"
+    ports:
+      - "81:80"
+    environment:
+      - "CHOKIDAR_USEPOLLING=true"
+
+  alivoulut_currency-service:
+    container_name: alivoulut_currency-service
+    build:
+      context: "./"
+      dockerfile: "docker_currency-service.dockerfile"
+    ports:
+      - "8083:8080"
+    environment:
+      - "SPRING_PROFILES_ACTIVE=docker"
+    depends_on:
+      - alivolut_postgresql
+      - alivolut_keycloak
+    networks:
+      - "local"
+
+  alivolut_currency-ui:
+    container_name: "alivolut_currency-ui"
+    build:
+      context: "./"
+      dockerfile: "docker_currency-ui.dockerfile"
+    ports:
+      - "82:80"
+    environment:
+      - "CHOKIDAR_USEPOLLING=true"
+
+networks:
+  local:
+    driver: "bridge"
